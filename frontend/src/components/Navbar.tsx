@@ -8,7 +8,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <nav
-      className={`flex items-center justify-between bg-white/5 backdrop-blur-3xl px-4 md:px-8 shadow-md sticky top-0 z-10 transition-all duration-300 ${
+      className={`flex items-center justify-between bg-white/10 backdrop-blur-xl px-4 md:px-8 shadow-md sticky top-0 z-10 transition-all duration-300 isolate ${
         menuOpen ? "rounded-b-none" : "rounded-b-4xl"
       }`}
     >
@@ -22,7 +22,7 @@ export default function Navbar() {
 
       {/* Options Icon for Mobile */}
       <button
-        className="md:hidden flex flex-col justify-center items-center w-10 h-10 ml-2"
+        className="md:hidden flex flex-col justify-center items-center w-10 h-10 ml-2 mr-4"
         onClick={() => setMenuOpen((open) => !open)}
         aria-label="Toggle menu"
       >
@@ -45,7 +45,7 @@ export default function Navbar() {
 
       {/* Right: Nav Options */}
       <div
-        className={`flex-col md:flex-row flex md:flex items-center gap-3 px-6 md:static absolute top-full left-0 w-full md:w-auto md:shadow-none rounded-b-2xl md:rounded-none z-20 pb-6 md:pb-0 bg-white/5 backdrop-blur-3xl md:backdrop-blur-none md:bg-transparent transition-all duration-300 ease-in-out transform-origin-top ${
+        className={`flex-col md:flex-row flex md:flex items-center gap-3 px-6 md:static absolute top-full left-0 w-full md:w-auto md:shadow-none rounded-b-2xl md:rounded-none z-auto pb-6 md:pb-0 bg-white/10 backdrop-blur-xl md:backdrop-blur-none md:bg-transparent transition-all duration-300 ease-in-out transform-origin-top isolate ${
           menuOpen
             ? "opacity-100 scale-y-100 pointer-events-auto"
             : "opacity-0 scale-y-95 pointer-events-none"
