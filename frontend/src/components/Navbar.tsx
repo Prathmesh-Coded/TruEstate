@@ -1,11 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
+import Button from "./Button";
 
 const COMPANY_NAME = "TruEstate";
 
-export default function Navbar() {
+interface User {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+interface NavbarProps {
+  user: User | null;
+  onLogout: () => void;
+}
+
+export default function Navbar({ user, onLogout }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <nav
       className={`flex items-center justify-between bg-white/10 backdrop-blur-xl px-4 md:px-8 shadow-md sticky top-0 z-10 transition-all duration-300 isolate ${
@@ -45,7 +59,7 @@ export default function Navbar() {
 
       {/* Right: Nav Options */}
       <div
-        className={`flex-col md:flex-row flex md:flex items-center gap-3 px-6 md:static absolute top-full left-0 w-full md:w-auto md:shadow-none rounded-b-2xl md:rounded-none z-auto pb-6 md:pb-0 bg-white/10 backdrop-blur-xl md:backdrop-blur-none md:bg-transparent transition-all duration-300 ease-in-out transform-origin-top isolate ${
+        className={`flex-col md:flex-row flex md:flex items-center gap-3 px-6 md:static absolute top-full left-0 w-full md:w-auto md:shadow-none rounded-b-2xl md:rounded-none z-auto pb-6 md:pb-0 bg-inherit backdrop-blur-xl md:backdrop-blur-none md:bg-transparent transition-all duration-300 ease-in-out transform-origin-top isolate ${
           menuOpen
             ? "opacity-100 scale-y-100 pointer-events-auto"
             : "opacity-0 scale-y-95 pointer-events-none"
@@ -81,13 +95,32 @@ export default function Navbar() {
           <span className="relative invisible px-5 py-2">Post a Property</span>
         </Link>
 
-        <Link
-          to="/login"
-          className="relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base no-underline transition duration-300 ease-out w-full md:w-auto text-center md:hover:shadow-xl/15 md:hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full md:hover:before:translate-x-full before:transition-transform before:duration-1000"
-          onClick={() => setMenuOpen(false)}
-        >
-          <span className="relative z-10">Login / Sign Up</span>
-        </Link>
+        {user ? (
+          <div className="flex items-center gap-3">
+            <span className="text-white text-sm hidden md:block">
+              Welcome, {user.firstName}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                onLogout();
+                setMenuOpen(false);
+              }}
+              className="w-full md:w-auto"
+            >
+              Logout
+            </Button>
+          </div>
+        ) : (
+          <Link
+            to="/auth"
+            className="relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base no-underline transition duration-300 ease-out w-full md:w-auto text-center md:hover:shadow-xl/15 md:hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full md:hover:before:translate-x-full before:transition-transform before:duration-1000"
+            onClick={() => setMenuOpen(false)}
+          >
+            <span className="relative z-10">Login / Sign Up</span>
+          </Link>
+        )}
       </div>
     </nav>
   );

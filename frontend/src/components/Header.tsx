@@ -2,13 +2,19 @@ import { useState } from "react";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import { useUserLocation } from "../hooks/useUserLocation";
+import { useAuth } from "../contexts/AuthContext";
+import { motion } from "framer-motion";
 
 export default function Header(): React.ReactElement {
   const { location, updateUserLocation, isLoading } = useUserLocation();
   const [activeType, setActiveType] = useState<string>("buy");
+  const { user, logout } = useAuth();
 
   return (
-    <header
+    <motion.header
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       className="relative"
       style={{
         backgroundImage: `url('/src/assets/headerbg.jpg')`,
@@ -19,7 +25,7 @@ export default function Header(): React.ReactElement {
     >
       <div className="absolute inset-0 bg-black/40" />
       <div className="relative z-10">
-        <Navbar />
+        <Navbar user={user} onLogout={logout} />
         <Hero
           location={location}
           onLocationChange={updateUserLocation}
@@ -28,6 +34,6 @@ export default function Header(): React.ReactElement {
           setActiveType={setActiveType}
         />
       </div>
-    </header>
+    </motion.header>
   );
 }
