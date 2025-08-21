@@ -59,7 +59,7 @@ export const getConfig = () => ({
 
 /**
  * Check if running in production
- */
+ */ 
 export const isProduction = (): boolean => {
   return process.env.NODE_ENV === "production";
 };

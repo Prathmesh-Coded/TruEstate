@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
-import Button from "./Button";
+// Button removed; using styled Menu.Button for Dashboard
+import { Menu, Transition, Dialog } from "@headlessui/react";
 
 const COMPANY_NAME = "TruEstate";
 
@@ -19,6 +20,7 @@ interface NavbarProps {
 
 export default function Navbar({ user, onLogout }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   return (
     <nav
@@ -96,21 +98,99 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-3">
-            <span className="text-white text-sm hidden md:block">
-              Welcome, {user.firstName}
-            </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                onLogout();
-                setMenuOpen(false);
-              }}
-              className="w-full md:w-auto"
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            {/* Desktop: dropdown */}
+            <Menu
+              as="div"
+              className="relative hidden md:inline-block text-left"
             >
-              Logout
-            </Button>
+              <div>
+                <Menu.Button className="relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base transition duration-300 ease-out w-full md:w-auto text-center md:hover:shadow-xl/15 md:hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full md:hover:before:translate-x-full before:transition-transform before:duration-1000">
+                  <span className="relative z-10">Dashboard</span>
+                </Menu.Button>
+              </div>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20">
+                  <div className="py-1">
+                    <div className="px-4 py-2 text-xs uppercase tracking-wide text-gray-400">
+                      Welcome, {user.firstName}
+                    </div>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/profile"
+                          className={`${
+                            active ? "bg-gray-100" : ""
+                          } block px-4 py-2 text-sm text-gray-700 no-underline`}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Profile
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/my-properties"
+                          className={`${
+                            active ? "bg-gray-100" : ""
+                          } block px-4 py-2 text-sm text-gray-700 no-underline`}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          My Properties
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/notifications"
+                          className={`${
+                            active ? "bg-gray-100" : ""
+                          } block px-4 py-2 text-sm text-gray-700 no-underline`}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Notifications
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <div className="my-1 h-px bg-gray-200" />
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          type="button"
+                          className={`${
+                            active ? "bg-gray-100" : ""
+                          } w-full text-left px-4 py-2 text-sm text-red-600`}
+                          onClick={() => {
+                            onLogout();
+                            setMenuOpen(false);
+                          }}
+                        >
+                          Logout
+                        </button>
+                      )}
+                    </Menu.Item>
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
+            {/* Mobile: full-width Dashboard button that opens slide-over */}
+            <button
+              type="button"
+              className="md:hidden relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base transition duration-300 ease-out w-full text-center hover:shadow-xl/15 hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full group-hover:before:translate-x-full before:transition-transform before:duration-1000"
+              onClick={() => setDashboardOpen(true)}
+            >
+              <span className="relative z-10">Dashboard</span>
+            </button>
           </div>
         ) : (
           <Link
@@ -122,6 +202,108 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
           </Link>
         )}
       </div>
+      {/* Mobile slide-over for Dashboard */}
+      {user && (
+        <Transition show={dashboardOpen} as={Fragment}>
+          <Dialog
+            as="div"
+            className="relative z-30 md:hidden"
+            onClose={setDashboardOpen}
+          >
+            <Transition.Child
+              as={Fragment}
+              enter="transition-opacity ease-linear duration-200"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="transition-opacity ease-linear duration-200"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="fixed inset-0 bg-black/40" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 overflow-hidden">
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full">
+                  <Transition.Child
+                    as={Fragment}
+                    enter="transform transition ease-in-out duration-300"
+                    enterFrom="translate-x-full"
+                    enterTo="translate-x-0"
+                    leave="transform transition ease-in-out duration-300"
+                    leaveFrom="translate-x-0"
+                    leaveTo="translate-x-full"
+                  >
+                    <Dialog.Panel className="pointer-events-auto w-screen max-w-xs bg-white shadow-xl">
+                      <div className="h-full flex flex-col">
+                        <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+                          <div className="text-sm text-gray-500">
+                            Welcome, {user.firstName}
+                          </div>
+                          <button
+                            type="button"
+                            className="text-gray-500 hover:text-gray-700"
+                            onClick={() => setDashboardOpen(false)}
+                            aria-label="Close"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto">
+                          <nav className="p-2 space-y-1">
+                            <Link
+                              to="/profile"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              onClick={() => {
+                                setDashboardOpen(false);
+                                setMenuOpen(false);
+                              }}
+                            >
+                              Profile
+                            </Link>
+                            <Link
+                              to="/my-properties"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              onClick={() => {
+                                setDashboardOpen(false);
+                                setMenuOpen(false);
+                              }}
+                            >
+                              My Properties
+                            </Link>
+                            <Link
+                              to="/notifications"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              onClick={() => {
+                                setDashboardOpen(false);
+                                setMenuOpen(false);
+                              }}
+                            >
+                              Notifications
+                            </Link>
+                            <div className="border-t border-gray-200 my-2" />
+                            <button
+                              type="button"
+                              className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 rounded"
+                              onClick={() => {
+                                onLogout();
+                                setDashboardOpen(false);
+                                setMenuOpen(false);
+                              }}
+                            >
+                              Logout
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
+                    </Dialog.Panel>
+                  </Transition.Child>
+                </div>
+              </div>
+            </div>
+          </Dialog>
+        </Transition>
+      )}
     </nav>
   );
 }

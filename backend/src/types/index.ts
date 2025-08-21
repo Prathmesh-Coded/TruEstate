@@ -5,6 +5,7 @@ import { Document } from "mongoose";
 export interface IUser extends Document {
   _id: string;
   email: string;
+  phoneNumber?: string;
   password?: string;
   googleId?: string;
   firstName?: string;
@@ -26,6 +27,7 @@ export interface IUser extends Document {
 export interface IJWTPayload {
   id: string;
   email: string;
+  phoneNumber?: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
   name?: string | undefined;
@@ -43,6 +45,7 @@ export interface IAuthResponse {
   user: {
     id: string;
     email: string;
+    phoneNumber?: string;
     firstName?: string | undefined;
     lastName?: string | undefined;
     name?: string | undefined;
@@ -72,4 +75,5 @@ export interface ISignupRequest {
 export interface ILoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }

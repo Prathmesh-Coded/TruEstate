@@ -7,6 +7,7 @@ import {
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Header from "./components/Header";
 import AuthPage from "./components/AuthPage";
+import ForgotPassword from "./components/ForgotPassword";
 import PropertyLoadingScreen from "./components/PropertyLoadingScreen";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -24,11 +25,7 @@ function HomePage() {
       {user ? (
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Welcome back,{" "}
-            {user.firstName
-              ? `${user.firstName}`.trim()
-              : user.name || user.email}
-            !
+            Welcome back, {user.firstName?.trim() || "User"}!
           </h1>
           <p className="text-gray-600">
             You are logged in to TruEstate. Explore properties and find your
@@ -57,6 +54,7 @@ function AnimatedRoutes() {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           path="/"
           element={

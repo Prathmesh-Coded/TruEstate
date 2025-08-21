@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 interface User {
   email: string;
+  phoneNumber?: string;
   firstName?: string;
   lastName?: string;
   name?: string;
@@ -36,8 +37,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const deriveFirstName = (u: User): User => {
+    if (u.firstName && u.firstName.trim().length > 0) return u;
+    if (u.name && u.name.trim().length > 0) {
+      const first = u.name.trim().split(" ")[0];
+      return { ...u, firstName: first };
+    }
+    if (u.email) {
+      const local = u.email.split("@")[0];
+      return { ...u, firstName: local };
+    }
+    return u;
+  };
+
   const login = (userData: User) => {
-    setUser(userData);
+    setUser(deriveFirstName(userData));
   };
 
   const logout = async () => {
@@ -62,7 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        setUser(deriveFirstName(data.user));
       } else {
         setUser(null);
       }

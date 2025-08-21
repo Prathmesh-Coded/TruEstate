@@ -1,24 +1,36 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Button from "./Button";
 
 interface PhoneAuthProps {
-  onSuccess: (phoneNumber: string) => void;
+  onLoginSuccess: (phoneNumber: string) => void;
+  onSignupSuccess: (
+    phoneNumber: string,
+    firstName: string,
+    lastName: string
+  ) => void;
+
   loading: boolean;
   disabled?: boolean;
   isLogin?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
+  rememberMe?: boolean;
 }
 
 const PhoneAuth: React.FC<PhoneAuthProps> = ({
-  onSuccess,
+  onLoginSuccess,
+  onSignupSuccess,
   loading,
   disabled = false,
   isLogin = true,
   onLoadingChange,
+  rememberMe = false,
 }) => {
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "details">("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -116,7 +128,6 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
     try {
       const digits = phoneNumber.replace(/\D/g, "");
 
-      // Simulate API call to verify OTP
       const response = await fetch(
         "http://localhost:5000/api/auth/verify-otp",
         {
@@ -135,17 +146,49 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
         throw new Error("Invalid verification code");
       }
 
-      onSuccess(`+91${digits}`); // This will handle the success and re-enable buttons
+      if (isLogin) {
+        // Directly log in via phone-login to set rememberMe cookie lifetime
+        await fetch("http://localhost:5000/api/auth/phone-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ phoneNumber: `+91${digits}`, rememberMe }),
+        });
+        onLoginSuccess(`+91${digits}`);
+      } else {
+        setStep("details");
+        setIsLoading(false);
+      }
     } catch (err) {
-      // For demo purposes, accept any 6-digit code
       if (otp === "123456" || otp.length === 6) {
         const digits = phoneNumber.replace(/\D/g, "");
-        onSuccess(`+91${digits}`); // This will handle the success and re-enable buttons
+        if (isLogin) {
+          onLoginSuccess(`+91${digits}`);
+        } else {
+          setStep("details");
+          setIsLoading(false);
+        }
       } else {
         setError("Invalid verification code. Try 123456 for demo.");
         setIsLoading(false);
-        // Don't re-enable other buttons on OTP error - user can try again
       }
+    }
+  };
+
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your first and last name.");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const digits = phoneNumber.replace(/\D/g, "");
+      onSignupSuccess(`+91${digits}`, firstName, lastName);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred.");
+      setIsLoading(false);
     }
   };
 
@@ -195,7 +238,8 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
 
   return (
     <AnimatePresence mode="wait">
-      {step === "phone" ? (
+      {/* -- Step 1: Phone Number Input -- */}
+      {step === "phone" && (
         <motion.div
           key="phone"
           initial={{ opacity: 0, x: 20 }}
@@ -255,20 +299,21 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading || loading || disabled}
-              className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              size="full"
+              loading={isLoading}
+              disabled={loading || disabled}
+              className="w-full"
             >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                "Send Verification Code"
-              )}
-            </button>
+              Send Verification Code
+            </Button>
           </form>
         </motion.div>
-      ) : (
+      )}
+
+      {/* -- Step 2: OTP Input -- */}
+      {step === "otp" && (
         <motion.div
           key="otp"
           initial={{ opacity: 0, x: 20 }}
@@ -331,32 +376,34 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading || loading}
-              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              size="full"
+              loading={isLoading}
+              disabled={loading}
+              className="w-full"
             >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                "Verify Code"
-              )}
-            </button>
+              Verify Code
+            </Button>
 
             <div className="text-center">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={handleResendOtp}
                 disabled={countdown > 0 || isLoading}
-                className="text-sm text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="text-blue-600 hover:text-blue-700 disabled:text-gray-400"
               >
                 {countdown > 0 ? `Resend code in ${countdown}s` : "Resend code"}
-              </button>
+              </Button>
             </div>
 
             <div className="text-center">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setStep("phone");
                   setOtp("");
@@ -364,11 +411,83 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
                   setPhoneNumber("");
                   onLoadingChange?.(false);
                 }}
-                className="text-sm text-gray-600 hover:text-gray-700"
+                className="text-sm"
               >
                 ← Change phone number / Back
-              </button>
+              </Button>
             </div>
+          </form>
+        </motion.div>
+      )}
+
+      {/* -- Step 3: User Details Input (for Signup) -- */}
+      {step === "details" && (
+        <motion.div
+          key="details"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Complete Your Profile
+            </h3>
+            <p className="text-sm text-gray-600">
+              Please enter your name to finish signing up.
+            </p>
+          </div>
+          <form onSubmit={handleDetailsSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
+            {error && (
+              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                {error}
+              </div>
+            )}
+            <Button
+              type="submit"
+              size="full"
+              loading={isLoading}
+              disabled={loading}
+              className="w-full"
+            >
+              Complete Signup
+            </Button>
           </form>
         </motion.div>
       )}
