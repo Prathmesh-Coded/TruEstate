@@ -36,6 +36,13 @@ const userSchema = new Schema<IUser>(
       trim: true,
       maxlength: 100,
     },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      index: true,
+      unique: true,
+      sparse: true,
+    },
     avatar: {
       type: String,
       validate: {
@@ -59,6 +66,13 @@ const userSchema = new Schema<IUser>(
       type: Date,
       default: Date.now,
     },
+    resetPasswordToken: {
+      type: String,
+      index: true,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -74,6 +88,7 @@ const userSchema = new Schema<IUser>(
 // Compound indexes for better performance
 userSchema.index({ email: 1, authProvider: 1 });
 userSchema.index({ googleId: 1, authProvider: 1 });
+userSchema.index({ phoneNumber: 1 });
 
 // Pre-save middleware for password hashing
 userSchema.pre("save", async function (next) {
