@@ -1,8 +1,16 @@
 import { useState, Fragment } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.png";
-// Button removed; using styled Menu.Button for Dashboard
-import { Menu, Transition, Dialog } from "@headlessui/react";
+import {
+  Menu,
+  Transition,
+  TransitionChild,
+  Dialog,
+  MenuButton,
+  MenuItems,
+  MenuItem,
+  DialogPanel,
+} from "@headlessui/react";
 
 const COMPANY_NAME = "TruEstate";
 
@@ -105,9 +113,9 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
               className="relative hidden md:inline-block text-left"
             >
               <div>
-                <Menu.Button className="relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base transition duration-300 ease-out w-full md:w-auto text-center md:hover:shadow-xl/15 md:hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full md:hover:before:translate-x-full before:transition-transform before:duration-1000">
+                <MenuButton className="relative overflow-hidden group bg-white/20 text-white border border-black/20 rounded-md px-5 py-2 font-semibold text-base transition duration-300 ease-out w-full md:w-auto text-center md:hover:shadow-xl/15 md:hover:border-white/30 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:skew-x-[-25deg] before:-translate-x-full md:hover:before:translate-x-full before:transition-transform before:duration-1000">
                   <span className="relative z-10">Dashboard</span>
-                </Menu.Button>
+                </MenuButton>
               </div>
               <Transition
                 as={Fragment}
@@ -118,57 +126,57 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                 leaveFrom="transform opacity-100 scale-100"
                 leaveTo="transform opacity-0 scale-95"
               >
-                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20">
+                <MenuItems className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20">
                   <div className="py-1">
                     <div className="px-4 py-2 text-xs uppercase tracking-wide text-gray-400">
                       Welcome, {user.firstName}
                     </div>
-                    <Menu.Item>
-                      {({ active }) => (
+                    <MenuItem>
+                      {({ focus }) => (
                         <Link
                           to="/profile"
                           className={`${
-                            active ? "bg-gray-100" : ""
+                            focus ? "bg-gray-100" : ""
                           } block px-4 py-2 text-sm text-gray-700 no-underline`}
                           onClick={() => setMenuOpen(false)}
                         >
                           Profile
                         </Link>
                       )}
-                    </Menu.Item>
-                    <Menu.Item>
-                      {({ active }) => (
+                    </MenuItem>
+                    <MenuItem>
+                      {({ focus }) => (
                         <Link
                           to="/my-properties"
                           className={`${
-                            active ? "bg-gray-100" : ""
+                            focus ? "bg-gray-100" : ""
                           } block px-4 py-2 text-sm text-gray-700 no-underline`}
                           onClick={() => setMenuOpen(false)}
                         >
                           My Properties
                         </Link>
                       )}
-                    </Menu.Item>
-                    <Menu.Item>
-                      {({ active }) => (
+                    </MenuItem>
+                    <MenuItem>
+                      {({ focus }) => (
                         <Link
                           to="/notifications"
                           className={`${
-                            active ? "bg-gray-100" : ""
+                            focus ? "bg-gray-100" : ""
                           } block px-4 py-2 text-sm text-gray-700 no-underline`}
                           onClick={() => setMenuOpen(false)}
                         >
                           Notifications
                         </Link>
                       )}
-                    </Menu.Item>
+                    </MenuItem>
                     <div className="my-1 h-px bg-gray-200" />
-                    <Menu.Item>
-                      {({ active }) => (
+                    <MenuItem>
+                      {({ focus }) => (
                         <button
                           type="button"
                           className={`${
-                            active ? "bg-gray-100" : ""
+                            focus ? "bg-gray-100" : ""
                           } w-full text-left px-4 py-2 text-sm text-red-600`}
                           onClick={() => {
                             onLogout();
@@ -178,9 +186,9 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                           Logout
                         </button>
                       )}
-                    </Menu.Item>
+                    </MenuItem>
                   </div>
-                </Menu.Items>
+                </MenuItems>
               </Transition>
             </Menu>
             {/* Mobile: full-width Dashboard button that opens slide-over */}
@@ -210,7 +218,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
             className="relative z-30 md:hidden"
             onClose={setDashboardOpen}
           >
-            <Transition.Child
+            <TransitionChild
               as={Fragment}
               enter="transition-opacity ease-linear duration-200"
               enterFrom="opacity-0"
@@ -220,12 +228,12 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
               leaveTo="opacity-0"
             >
               <div className="fixed inset-0 bg-black/40" />
-            </Transition.Child>
+            </TransitionChild>
 
             <div className="fixed inset-0 overflow-hidden">
               <div className="absolute inset-0 overflow-hidden">
                 <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full">
-                  <Transition.Child
+                  <TransitionChild
                     as={Fragment}
                     enter="transform transition ease-in-out duration-300"
                     enterFrom="translate-x-full"
@@ -234,7 +242,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                     leaveFrom="translate-x-0"
                     leaveTo="translate-x-full"
                   >
-                    <Dialog.Panel className="pointer-events-auto w-screen max-w-xs bg-white shadow-xl">
+                    <DialogPanel className="pointer-events-auto w-screen max-w-xs bg-white shadow-xl">
                       <div className="h-full flex flex-col">
                         <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
                           <div className="text-sm text-gray-500">
@@ -253,7 +261,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                           <nav className="p-2 space-y-1">
                             <Link
                               to="/profile"
-                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-200 rounded"
                               onClick={() => {
                                 setDashboardOpen(false);
                                 setMenuOpen(false);
@@ -263,7 +271,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                             </Link>
                             <Link
                               to="/my-properties"
-                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-200 rounded"
                               onClick={() => {
                                 setDashboardOpen(false);
                                 setMenuOpen(false);
@@ -273,7 +281,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                             </Link>
                             <Link
                               to="/notifications"
-                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-100 rounded"
+                              className="block px-4 py-3 text-gray-800 no-underline hover:bg-gray-200 rounded"
                               onClick={() => {
                                 setDashboardOpen(false);
                                 setMenuOpen(false);
@@ -296,8 +304,8 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                           </nav>
                         </div>
                       </div>
-                    </Dialog.Panel>
-                  </Transition.Child>
+                    </DialogPanel>
+                  </TransitionChild>
                 </div>
               </div>
             </div>
