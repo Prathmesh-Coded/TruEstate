@@ -40,7 +40,9 @@ export default function LocationSelector({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-[180px] h-full px-4 py-3 border-none md:text-black text-white md:bg-transparent rounded-none focus:outline-none focus:ring-0 transition-colors flex items-center justify-between relative"
+        className={`w-[180px] h-full px-4 py-3 border-none md:text-black text-white md:bg-transparent focus:outline-none focus:ring-0 transition-all duration-300 flex items-center justify-between relative ${
+          isOpen ? "rounded-b-xl" : "rounded-lg" // Changes border on open
+        }`}
         aria-label="Select location"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -73,11 +75,11 @@ export default function LocationSelector({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute top-full left-0 w-[220px] z-[9999] mt-1 bg-black/30 text-white md:bg-white md:text-black rounded-lg shadow-lg overflow-hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="absolute top-full -left-2 w-[200px] z-[9999] mt-1 bg-black/30 text-white md:bg-white md:text-black rounded-b-lg shadow-lg overflow-hidden"
             role="listbox"
           >
             <div className="max-h-[200px] md:bg-white bg-black/30 overflow-y-auto">
@@ -86,10 +88,10 @@ export default function LocationSelector({
                   key={city}
                   type="button"
                   onClick={() => handleSelect(city)}
-                  className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors ${
+                  className={`w-full px-4 py-3 text-left pl-6 hover:bg-blue-50 transition-colors ${
                     currentLocation === city
                       ? "bg-blue-100 text-blue-700"
-                      : "text-black"
+                      : "md:text-black text-white"
                   }`}
                   role="option"
                   aria-selected={currentLocation === city}

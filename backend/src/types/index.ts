@@ -8,13 +8,15 @@ export interface IUser extends Document {
   phoneNumber?: string;
   password?: string;
   googleId?: string;
-  firstName?: string;
-  lastName?: string;
-  name?: string;
+  firstName: string;
+  lastName: string;
+  name: string;
   avatar?: string;
   authProvider: "local" | "google" | "phone";
   isEmailVerified: boolean;
   lastLogin: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 

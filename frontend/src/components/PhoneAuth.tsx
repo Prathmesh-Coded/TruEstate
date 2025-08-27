@@ -3,26 +3,21 @@ import { motion, AnimatePresence } from "framer-motion";
 import Button from "./Button";
 
 interface PhoneAuthProps {
-  onLoginSuccess: (phoneNumber: string) => void;
-  onSignupSuccess: (
-    phoneNumber: string,
-    firstName: string,
-    lastName: string
-  ) => void;
-
-  loading: boolean;
+  onSuccess: (data: {
+    phoneNumber: string;
+    firstName?: string;
+    lastName?: string;
+  }) => void;
+  mode: "login" | "signup" | "verify";
   disabled?: boolean;
-  isLogin?: boolean;
   onLoadingChange?: (isLoading: boolean) => void;
   rememberMe?: boolean;
 }
 
 const PhoneAuth: React.FC<PhoneAuthProps> = ({
-  onLoginSuccess,
-  onSignupSuccess,
-  loading,
+  onSuccess,
+  mode,
   disabled = false,
-  isLogin = true,
   onLoadingChange,
   rememberMe = false,
 }) => {
@@ -64,17 +59,17 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
     }
 
     try {
-      // Simulate API call to send OTP
       const response = await fetch("http://localhost:5000/api/auth/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phoneNumber: `+91${digits}` }),
+        body: JSON.stringify({ phoneNumber: `+91${digits}`, mode }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send OTP");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to send OTP");
       }
 
       setStep("otp");
@@ -94,23 +89,10 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
       setIsLoading(false);
       // Don't call onLoadingChange(false) here - keep other buttons disabled
     } catch (err) {
-      // For demo purposes, always proceed to OTP step
-      console.log("OTP send simulation - proceeding to OTP step");
-      setStep("otp");
-      setCountdown(60);
-
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
+      const message = err instanceof Error ? err.message : "Failed to send OTP";
+      setError(message);
       setIsLoading(false);
-      // Don't call onLoadingChange(false) here - keep other buttons disabled
+      onLoadingChange?.(false);
     }
   };
 
@@ -143,10 +125,11 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
       );
 
       if (!response.ok) {
-        throw new Error("Invalid verification code");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Invalid verification code");
       }
 
-      if (isLogin) {
+      if (mode === "login") {
         // Directly log in via phone-login to set rememberMe cookie lifetime
         await fetch("http://localhost:5000/api/auth/phone-login", {
           method: "POST",
@@ -154,24 +137,21 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
           credentials: "include",
           body: JSON.stringify({ phoneNumber: `+91${digits}`, rememberMe }),
         });
-        onLoginSuccess(`+91${digits}`);
+        onSuccess({ phoneNumber: `+91${digits}` });
+        onLoadingChange?.(false);
+      } else if (mode === "verify") {
+        // In verify mode, user is already logged in, so just return success
+        onSuccess({ phoneNumber: `+91${digits}` });
+        onLoadingChange?.(false);
       } else {
         setStep("details");
         setIsLoading(false);
       }
     } catch (err) {
-      if (otp === "123456" || otp.length === 6) {
-        const digits = phoneNumber.replace(/\D/g, "");
-        if (isLogin) {
-          onLoginSuccess(`+91${digits}`);
-        } else {
-          setStep("details");
-          setIsLoading(false);
-        }
-      } else {
-        setError("Invalid verification code. Try 123456 for demo.");
-        setIsLoading(false);
-      }
+      setError(
+        err instanceof Error ? err.message : "Invalid verification code"
+      );
+      setIsLoading(false);
     }
   };
 
@@ -185,7 +165,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
     setIsLoading(true);
     try {
       const digits = phoneNumber.replace(/\D/g, "");
-      onSignupSuccess(`+91${digits}`, firstName, lastName);
+      onSuccess({ phoneNumber: `+91${digits}`, firstName, lastName });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred.");
       setIsLoading(false);
@@ -201,13 +181,18 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
     try {
       const digits = phoneNumber.replace(/\D/g, "");
 
-      await fetch("http://localhost:5000/api/auth/send-otp", {
+      const response = await fetch("http://localhost:5000/api/auth/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phoneNumber: `+91${digits}` }),
+        body: JSON.stringify({ phoneNumber: `+91${digits}`, mode }),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to resend OTP");
+      }
 
       setCountdown(60);
       const timer = setInterval(() => {
@@ -220,17 +205,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
         });
       }, 1000);
     } catch (err) {
-      // For demo, always allow resend
-      setCountdown(60);
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      setError(err instanceof Error ? err.message : "Failed to resend OTP");
     } finally {
       setIsLoading(false);
     }
@@ -256,7 +231,9 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
             </svg>
             <span className="text-sm font-medium text-gray-700">
-              {isLogin ? "Login with WhatsApp" : "Signup with WhatsApp"}
+              {mode === "login"
+                ? "Login with WhatsApp"
+                : "Signup with WhatsApp"}
             </span>
           </div>
 
@@ -303,7 +280,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               type="submit"
               size="full"
               loading={isLoading}
-              disabled={loading || disabled}
+              disabled={disabled || isLoading}
               className="w-full"
             >
               Send Verification Code
@@ -380,7 +357,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               type="submit"
               size="full"
               loading={isLoading}
-              disabled={loading}
+              disabled={isLoading || otp.length !== 6}
               className="w-full"
             >
               Verify Code
@@ -399,7 +376,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               </Button>
             </div>
 
-            <div className="text-center">
+            <div className="text-center text-black">
               <Button
                 type="button"
                 variant="ghost"
@@ -411,7 +388,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
                   setPhoneNumber("");
                   onLoadingChange?.(false);
                 }}
-                className="text-sm"
+                className="text-sm text-blue-600 hover:text-blue-700"
               >
                 ← Change phone number / Back
               </Button>
@@ -483,7 +460,7 @@ const PhoneAuth: React.FC<PhoneAuthProps> = ({
               type="submit"
               size="full"
               loading={isLoading}
-              disabled={loading}
+              disabled={isLoading}
               className="w-full"
             >
               Complete Signup
