@@ -29,8 +29,17 @@ const AuthPage: React.FC = () => {
   const [pane, setPane] = useState<"auth" | "forgot" | "reset">("auth");
 
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { login, checkAuth } = useAuth();
+
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "signup") {
+      setIsLogin(false); // Switch to the signup view
+    } else {
+      setIsLogin(true); // Default to the login view
+    }
+  }, [searchParams]); // Rerun this effect if the URL search params change
 
   // Handle OAuth callback with enhanced error handling
   useEffect(() => {
@@ -251,89 +260,101 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  const handlePhoneLoginSuccess = async (phoneNumber: string) => {
-    setLoading(true);
-    setIsAuthenticating(true);
-    setError("");
+  const handlePhoneAuth = async (data: {
+    phoneNumber: string;
+    firstName?: string;
+    lastName?: string;
+  }) => {
+    const { phoneNumber, firstName, lastName } = data;
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/phone-login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ phoneNumber, rememberMe }),
+    if (isLogin) {
+      setLoading(true);
+      setIsAuthenticating(true);
+      setError("");
+
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/auth/phone-login",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ phoneNumber, rememberMe }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Login with phone number failed.");
         }
-      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login with phone number failed.");
+        login(data.user); // Update the auth context
+        navigate("/"); // Redirect to home page
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred."
+        );
+      } finally {
+        setLoading(false);
+        setIsAuthenticating(false);
       }
+    } else {
+      setLoading(true);
+      setIsAuthenticating(true);
+      setError("");
 
-      login(data.user); // Update the auth context
-      navigate("/"); // Redirect to home page
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred."
-      );
-    } finally {
-      setLoading(false);
-      setIsAuthenticating(false);
-    }
-  };
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/auth/complete-phone-signup",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              phoneNumber,
+              firstName,
+              lastName,
+              rememberMe,
+            }),
+          }
+        );
 
-  const handlePhoneSignupSuccess = async (
-    phoneNumber: string,
-    firstName: string,
-    lastName: string
-  ) => {
-    setLoading(true);
-    setIsAuthenticating(true);
-    setError("");
+        const data = await response.json();
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/complete-phone-signup",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            phoneNumber,
-            firstName,
-            lastName,
-            rememberMe,
-          }),
+        if (!response.ok) {
+          throw new Error(data.message || "Could not complete signup.");
         }
-      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Could not complete signup.");
+        login(data.user); // Update the auth context with the new user
+        navigate("/"); // Redirect to home page
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred."
+        );
+      } finally {
+        setLoading(false);
+        setIsAuthenticating(false);
       }
-
-      login(data.user); // Update the auth context with the new user
-      navigate("/"); // Redirect to home page
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred."
-      );
-    } finally {
-      setLoading(false);
-      setIsAuthenticating(false);
     }
   };
 
   const toggleMode = () => {
-    setIsLogin(!isLogin);
+    const newIsLogin = !isLogin;
+    setIsLogin(newIsLogin);
+
+    if (newIsLogin) {
+      // If we are now in LOGIN mode, clear the param
+      setSearchParams({});
+    } else {
+      // If we are now in SIGNUP mode, set the param
+      setSearchParams({ mode: "signup" });
+    }
+
     setError("");
     setFormData({
       firstName: "",
@@ -510,10 +531,8 @@ const AuthPage: React.FC = () => {
 
                     <div className="border border-gray-300 rounded-lg p-4 bg-white">
                       <PhoneAuth
-                        onLoginSuccess={handlePhoneLoginSuccess}
-                        onSignupSuccess={handlePhoneSignupSuccess}
-                        isLogin={isLogin}
-                        loading={loading}
+                        mode={isLogin ? "login" : "signup"}
+                        onSuccess={handlePhoneAuth}
                         disabled={isAuthenticating}
                         onLoadingChange={setIsAuthenticating}
                         rememberMe={rememberMe}

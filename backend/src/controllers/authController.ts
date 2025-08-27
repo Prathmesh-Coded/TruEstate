@@ -201,11 +201,30 @@ export const sendOtp = async (
   req: Request,
   res: Response
 ): Promise<Response | void> => {
-  const { phoneNumber } = req.body;
+  const { phoneNumber, mode } = req.body as {
+    phoneNumber?: string;
+    mode?: "login" | "signup";
+  };
   if (!phoneNumber) {
     return res.status(400).json({ message: "Phone number is required." });
   }
   try {
+    const email = `${phoneNumber}@phone.user`;
+    if (mode === "login") {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({
+          message: "No account found for this phone number. Please sign up.",
+        });
+      }
+    } else if (mode === "signup") {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res
+          .status(409)
+          .json({ message: "This phone number is already registered." });
+      }
+    }
     console.log(`✅ OTP sent to ${phoneNumber} (simulation).`);
     return res.status(200).json({ success: true, message: "OTP sent." });
   } catch (error) {
@@ -229,7 +248,7 @@ export const completePhoneSignup = async (
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res
-        .status(400)
+        .status(409)
         .json({ message: "This phone number is already registered." });
     }
 
@@ -392,5 +411,57 @@ export const resetPassword = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("❌ Reset password error:", error);
     return res.status(500).json({ message: "Unable to reset password" });
+  }
+};
+
+export const linkPhone = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    const userId = req.user?.id;
+    const { phoneNumber } = req.body as { phoneNumber?: string };
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!phoneNumber) {
+      return res.status(400).json({ message: "Phone number is required" });
+    }
+
+    // Ensure phone number is not already taken by another user
+    const existingWithPhone = await User.findOne({ phoneNumber });
+    if (existingWithPhone && String(existingWithPhone._id) !== String(userId)) {
+      return res
+        .status(409)
+        .json({ message: "This phone number is already in use." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.phoneNumber = phoneNumber;
+    await user.save();
+
+    // Return updated user (no need to reissue token here)
+    return res.status(200).json({
+      message: "Phone number linked successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        firstName: (user as any).firstName,
+        lastName: (user as any).lastName,
+        authProvider: user.authProvider,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Link phone error:", error);
+    return res
+      .status(500)
+      .json({ message: "Unable to link phone number. Please try again." });
   }
 };

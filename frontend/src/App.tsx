@@ -9,6 +9,7 @@ import Header from "./components/Header";
 import AuthPage from "./components/AuthPage";
 import ForgotPassword from "./components/ForgotPassword";
 import PropertyLoadingScreen from "./components/PropertyLoadingScreen";
+import PostProperty from "./components/PostProperty";
 import { motion, AnimatePresence } from "framer-motion";
 
 function HomePage() {
@@ -55,6 +56,7 @@ function AnimatedRoutes() {
       <Routes location={location} key={location.pathname}>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/post-property" element={<PostProperty />} />
         <Route
           path="/"
           element={
