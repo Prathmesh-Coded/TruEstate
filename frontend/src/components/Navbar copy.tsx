@@ -1,6 +1,5 @@
 import { useState, Fragment } from "react";
 import { Link } from "react-router-dom";
-import NotificationBell from "./NotificationBell";
 import logo from "../assets/logo.png";
 import {
   Menu,
@@ -76,13 +75,6 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
             : "opacity-0 scale-y-95 pointer-events-none"
         } md:opacity-100 md:scale-y-100 md:pointer-events-auto`}
       >
-        {/* Notification Bell - moved to leftmost position */}
-        {user && (
-          <div className="order-first">
-            <NotificationBell />
-          </div>
-        )}
-
         <Link
           to="/saved"
           className="font-semibold text-base no-underline text-white md:hover:text-blue-300 transition md:py-0 md:px-2 px-5 py-2 w-full md:w-auto md:mt-0 mt-2 text-center rounded-md"

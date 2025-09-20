@@ -21,6 +21,14 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 // Import routes
 import authRoutes from "./routes/authRoutes";
+import propertyRoutes from "./routes/propertyRoutes";
+// @ts-ignore - JS module in TS project
+import notificationRoutes from "../routes/notificationRoutes";
+import {
+  listPropertiesForAdmin,
+  updatePropertyStatus,
+} from "./controllers/propertyController";
+import { authenticateToken } from "./middleware/auth";
 
 // Validate environment before starting
 validateEnvironment();
@@ -36,15 +44,68 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// CORS configuration
-app.use(
-  cors({
-    origin: config.allowedOrigins,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-  })
-);
+// CORS configuration - environment-aware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const isDevelopment = config.nodeEnv === "development";
+
+  // In development, allow localhost and 127.0.0.1 origins
+  if (isDevelopment) {
+    const allowedDevOrigins = [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174",
+    ];
+
+    if (origin && allowedDevOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Access-Control-Allow-Credentials", "true");
+    } else if (!origin) {
+      // Allow requests with no origin (like mobile apps or curl)
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Credentials", "false");
+    } else {
+      // Block unknown origins in development
+      console.log(`🚫 CORS blocked origin in dev: ${origin}`);
+      res.status(403).json({ message: "Origin not allowed" });
+      return;
+    }
+  } else {
+    // Production: only allow specific origins
+    if (origin && config.allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Access-Control-Allow-Credentials", "true");
+    } else {
+      console.log(`🚫 CORS blocked origin in production: ${origin}`);
+      res.status(403).json({ message: "Origin not allowed" });
+      return;
+    }
+  }
+
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type,Authorization,Accept,X-Requested-With"
+  );
+
+  if (req.method === "OPTIONS") {
+    console.log(`🔍 Preflight request from origin: ${origin}`);
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method === "PATCH") {
+    console.log(`🔍 PATCH request to ${req.path} from origin: ${origin}`);
+  }
+
+  next();
+});
 
 // Session configuration
 app.use(
@@ -95,6 +156,33 @@ app.get("/api/health", (req, res) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/properties", propertyRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+// Admin guard
+const requireAdmin: any = async (req: any, res: any, next: any) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  try {
+    // Minimal check: token payload may already contain role
+    if (req.user.role === "admin") return next();
+    return res.status(403).json({ message: "Forbidden" });
+  } catch (e) {
+    return res.status(500).json({ message: "Admin check failed" });
+  }
+};
+
+app.get(
+  "/api/admin/properties",
+  authenticateToken as any,
+  requireAdmin,
+  listPropertiesForAdmin as any
+);
+app.patch(
+  "/api/admin/properties/:id",
+  authenticateToken as any,
+  requireAdmin,
+  updatePropertyStatus as any
+);
 
 /**
  * Error Handling Middleware

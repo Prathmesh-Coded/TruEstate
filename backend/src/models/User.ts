@@ -73,11 +73,17 @@ const userSchema = new Schema<IUser>(
     resetPasswordExpires: {
       type: Date,
     },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+      index: true,
+    },
   },
   {
     timestamps: true,
     toJSON: {
-      transform: function (doc, ret) {
+      transform: function (doc, ret: any) {
         delete ret.password;
         return ret;
       },
@@ -92,12 +98,13 @@ userSchema.index({ phoneNumber: 1 });
 
 // Pre-save middleware for password hashing
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  const self: any = this as any;
+  if (!self.isModified("password")) return next();
 
-  if (this.password) {
+  if (self.password) {
     try {
       const salt = await bcrypt.genSalt(12);
-      this.password = await bcrypt.hash(this.password, salt);
+      self.password = await bcrypt.hash(self.password, salt);
     } catch (error) {
       return next(error as Error);
     }
@@ -109,14 +116,15 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
-  if (!this.password) return false;
-  return bcrypt.compare(candidatePassword, this.password);
+  const self: any = this as any;
+  if (!self.password) return false;
+  return bcrypt.compare(candidatePassword, self.password);
 };
 
 // Instance method to update last login
 userSchema.methods.updateLastLogin = async function (): Promise<void> {
-  this.lastLogin = new Date();
-  await this.save();
+  (this as any).lastLogin = new Date();
+  await (this as any).save();
 };
 
 // Static methods interface

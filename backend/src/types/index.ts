@@ -17,6 +17,7 @@ export interface IUser extends Document {
   lastLogin: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  role: "user" | "admin";
   createdAt: Date;
   updatedAt: Date;
 
@@ -53,6 +54,7 @@ export interface IAuthResponse {
     name?: string | undefined;
     authProvider: string;
     isEmailVerified: boolean;
+    role?: string;
   };
 }
 

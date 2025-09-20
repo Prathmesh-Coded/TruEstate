@@ -22,6 +22,7 @@ const sendAuthResponse = (
     email: user.email,
     firstName: user.firstName,
     authProvider: user.authProvider,
+    role: user.role,
   };
 
   const token = jwt.sign(tokenPayload, process.env.JWT_SECRET!, {
@@ -46,6 +47,7 @@ const sendAuthResponse = (
       lastName: user.lastName,
       authProvider: user.authProvider,
       isEmailVerified: user.isEmailVerified,
+      role: user.role,
     },
   });
 };
@@ -325,6 +327,7 @@ export const googleAuthSuccess = async (
         email: user.email,
         name: user.name,
         authProvider: user.authProvider,
+        role: (user as any).role,
       },
       process.env.JWT_SECRET!,
       { expiresIn: "7d" }
@@ -456,6 +459,7 @@ export const linkPhone = async (
         lastName: (user as any).lastName,
         authProvider: user.authProvider,
         isEmailVerified: user.isEmailVerified,
+        role: (user as any).role,
       },
     });
   } catch (error) {
