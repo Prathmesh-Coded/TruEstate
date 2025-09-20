@@ -241,17 +241,64 @@ const PostProperty: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const payload: any = {
+        listingType: formData.listingType,
+        propertyType: formData.propertyType,
+        title: formData.title,
+        description: formData.description,
+        price: formData.price,
+        address: formData.address,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        floors: formData.floors,
+        furnished: formData.furnished,
+        parking: formData.parking,
+        roomSharing: formData.roomSharing,
+        foodIncluded: formData.foodIncluded,
+        pgFor: formData.pgFor,
+        plotArea: formData.plotArea,
+        plotAreaUnit: formData.plotAreaUnit,
+        zoning: formData.zoning,
+        propertyStatus: formData.propertyStatus,
+        washrooms: formData.washrooms,
+        documents: {
+          // Placeholder: later implement file uploads and use returned URLs
+          ownerId: formData.ownerId ? "uploaded-owner-id" : undefined,
+          ownershipDoc: formData.ownershipDoc
+            ? "uploaded-ownership-doc"
+            : undefined,
+          buildingPlan: formData.buildingPlan
+            ? "uploaded-building-plan"
+            : undefined,
+        },
+      };
 
-      // Success - redirect to success page or show success message
-      alert(
-        "Property submitted successfully! Our team will review and verify your listing within 24-48 hours."
-      );
+      const res = await fetch("http://localhost:5000/api/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Submission failed");
+      }
+      const status = data?.verification?.status;
+      let msg = "Property submitted successfully!";
+      if (status === "PENDING_AUTO") {
+        msg += " Running automatic validation...";
+      } else if (status === "AUTO_VALID") {
+        msg += " Passed automatic validation.";
+      } else if (status === "AUTO_INVALID") {
+        msg += " Automatic checks found issues; you'll get details shortly.";
+      } else if (status === "FLAGGED") {
+        msg += " Needs manual review by our team.";
+      }
+      alert(msg);
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting property:", error);
-      alert("Failed to submit property. Please try again.");
+      alert(error.message || "Failed to submit property. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

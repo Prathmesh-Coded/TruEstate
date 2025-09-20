@@ -5,12 +5,22 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import Header from "./components/Header";
+// import ToastContainer from "./components/ToastContainer"; // Disabled - no floating notifications
+import NotificationCenter from "./components/NotificationCenter";
 import AuthPage from "./components/AuthPage";
 import ForgotPassword from "./components/ForgotPassword";
 import PropertyLoadingScreen from "./components/PropertyLoadingScreen";
 import PostProperty from "./components/PostProperty";
 import { motion, AnimatePresence } from "framer-motion";
+import AdminRoute from "./components/AdminRoute";
+import AdminVerification from "./components/AdminVerification";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminLogin from "./components/admin/AdminLogin";
+import AdminUsers from "./components/admin/AdminUsers";
+import AdminSettings from "./components/admin/AdminSettings";
 
 function HomePage() {
   const { user } = useAuth();
@@ -58,6 +68,31 @@ function AnimatedRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/post-property" element={<PostProperty />} />
         <Route
+          path="/notifications"
+          element={
+            <div>
+              <Header />
+              <NotificationCenter />
+            </div>
+          }
+        />
+        {/* Admin public route: login */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        {/* Admin protected routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="properties" element={<AdminVerification />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
+        <Route
           path="/"
           element={
             <div>
@@ -88,7 +123,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+        {/* ToastContainer disabled - no floating notifications */}
+        {/* <ToastContainer /> */}
+      </NotificationProvider>
     </AuthProvider>
   );
 }
