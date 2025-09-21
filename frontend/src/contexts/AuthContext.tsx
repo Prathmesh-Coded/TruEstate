@@ -79,6 +79,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const data = await response.json();
         setUser(deriveFirstName(data.user));
       } else {
+        // Don't log 401 errors as they're expected when not authenticated
+        if (response.status !== 401) {
+          console.error("Auth check error:", response.status);
+        }
         setUser(null);
       }
     } catch (error) {

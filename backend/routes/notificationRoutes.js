@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Notification = require("../models/Notification");
-const { authenticateToken } = require("../src/middleware/auth");
+const { authenticateToken } = require("../dist/middleware/auth");
 
 // Get user notifications with pagination and filtering
 router.get("/", authenticateToken, async (req, res) => {
