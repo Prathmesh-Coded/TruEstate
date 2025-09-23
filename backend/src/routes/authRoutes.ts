@@ -33,6 +33,12 @@ router.post("/logout", authController.logout);
  */
 router.post("/complete-phone-signup", authController.completePhoneSignup);
 router.post("/phone-login", authController.phoneLogin);
+
+/**
+ * @route   POST /api/auth/send-otp
+ * @desc    Send OTP for phone verification
+ * @access  Public
+ */
 router.post("/send-otp", authController.sendOtp);
 
 /**

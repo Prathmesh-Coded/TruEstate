@@ -95,13 +95,8 @@ app.use((req, res, next) => {
   );
 
   if (req.method === "OPTIONS") {
-    console.log(`🔍 Preflight request from origin: ${origin}`);
     res.status(200).end();
     return;
-  }
-
-  if (req.method === "PATCH") {
-    console.log(`🔍 PATCH request to ${req.path} from origin: ${origin}`);
   }
 
   next();

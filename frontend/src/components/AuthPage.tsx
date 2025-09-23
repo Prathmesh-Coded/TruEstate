@@ -865,19 +865,10 @@ const AuthPage: React.FC = () => {
 
               {pane === "forgot" && (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                      Forgot password
-                    </h2>
-                    <button
-                      type="button"
-                      onClick={() => setPane("auth")}
-                      className="text-sm text-blue-600 hover:text-blue-500 bg-transparent border-0"
-                    >
-                      ← Back to sign in
-                    </button>
-                  </div>
-                  <ForgotPassword />
+                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 text-center">
+                    Forgot password
+                  </h2>
+                  <ForgotPassword onBackToSignIn={() => setPane("auth")} />
                 </div>
               )}
             </motion.div>

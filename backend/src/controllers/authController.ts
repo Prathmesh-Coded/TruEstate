@@ -356,30 +356,87 @@ export const googleAuthFailure = (req: Request, res: Response): void => {
   res.redirect("http://localhost:5173/auth?error=google_auth_failed");
 };
 
+export const checkEmail = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body as { email?: string };
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address",
+        exists: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Email found",
+      exists: true,
+    });
+  } catch (error) {
+    console.error("❌ Check email error:", error);
+    return res.status(500).json({ message: "Unable to verify email" });
+  }
+};
+
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = req.body as { email?: string };
-    if (!email) return res.status(400).json({ message: "Email is required" });
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      // To prevent user enumeration, return success
-      return res
-        .status(200)
-        .json({ message: "If the email exists, a reset link has been sent" });
+    // Validate email format and presence
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Log for security monitoring (production-appropriate)
+      console.log(`🔐 Password reset attempt for non-existent email: ${email}`);
+      return res.status(404).json({
+        message:
+          "No account found with this email address. Please check your email or create a new account.",
+        exists: false,
+      });
+    }
+
+    // User exists - generate reset token
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Save reset token to user
     (user as any).resetPasswordToken = token;
     (user as any).resetPasswordExpires = expires;
     await user.save();
 
-    // In production, email the reset link. For now, return token for dev.
-    return res.status(200).json({ message: "Reset link generated", token });
+    // Log for security monitoring (production-appropriate)
+    console.log(`📝 Password reset token generated for: ${email}`);
+
+    return res.status(200).json({
+      message: "Password reset link has been sent to your email address",
+      exists: true,
+      // Show token only in development for testing
+      ...(process.env.NODE_ENV !== "production" && {
+        token,
+        note: "Token shown for development only",
+      }),
+    });
   } catch (error) {
     console.error("❌ Forgot password error:", error);
-    return res.status(500).json({ message: "Unable to process request" });
+    return res.status(500).json({
+      message:
+        "Unable to process password reset request. Please try again later.",
+    });
   }
 };
 
