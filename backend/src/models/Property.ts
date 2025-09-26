@@ -61,6 +61,8 @@ export interface IProperty extends Document {
     decidedAt?: Date;
     decidedBy?: mongoose.Types.ObjectId; // admin user id
   };
+  views: number; // Number of times property has been viewed
+  likes: number; // Number of likes/saves
   createdAt: Date;
   updatedAt: Date;
 }
@@ -157,6 +159,8 @@ const propertySchema = new Schema<IProperty>(
       decidedAt: { type: Date },
       decidedBy: { type: Schema.Types.ObjectId, ref: "User" },
     },
+    views: { type: Number, default: 0, min: 0 },
+    likes: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

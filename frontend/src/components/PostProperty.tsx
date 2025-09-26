@@ -286,7 +286,7 @@ const PostProperty: React.FC = () => {
       const status = data?.verification?.status;
       let msg = "Property submitted successfully!";
       if (status === "PENDING_AUTO") {
-        msg += " Running automatic validation...";
+        msg += "Pending Validation";
       } else if (status === "AUTO_VALID") {
         msg += " Passed automatic validation.";
       } else if (status === "AUTO_INVALID") {

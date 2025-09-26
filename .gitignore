@@ -2,6 +2,7 @@ ProjectStuff/
 .vscode/
 .cursor-context
 .env
+cookies.txt
 
 # Logs
 logs

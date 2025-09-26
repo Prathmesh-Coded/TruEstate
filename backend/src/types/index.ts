@@ -4,7 +4,7 @@ import { Document } from "mongoose";
 // User Interface
 export interface IUser extends Document {
   _id: string;
-  email: string;
+  email?: string; // Optional for phone users
   phoneNumber?: string;
   password?: string;
   googleId?: string;
@@ -18,6 +18,16 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   role: "user" | "admin";
+  savedProperties?: string[]; // Array of property IDs that user has saved/liked
+  settings?: {
+    emailNotifications: boolean;
+    smsNotifications: boolean;
+    propertyAlerts: boolean;
+    marketingEmails: boolean;
+    profileVisibility: "public" | "private" | "contacts-only";
+    showPhoneNumber: boolean;
+    showEmail: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 

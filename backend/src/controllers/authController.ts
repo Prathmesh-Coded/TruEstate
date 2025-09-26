@@ -211,16 +211,18 @@ export const sendOtp = async (
     return res.status(400).json({ message: "Phone number is required." });
   }
   try {
-    const email = `${phoneNumber}@phone.user`;
     if (mode === "login") {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({
+        phoneNumber,
+        authProvider: "phone",
+      });
       if (!user) {
         return res.status(404).json({
           message: "No account found for this phone number. Please sign up.",
         });
       }
     } else if (mode === "signup") {
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ phoneNumber });
       if (existingUser) {
         return res
           .status(409)
@@ -246,22 +248,25 @@ export const completePhoneSignup = async (
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const email = `${phoneNumber}@phone.user`;
-    const existingUser = await User.findOne({ email });
+    // Check if phone number is already registered
+    const existingUser = await User.findOne({ phoneNumber });
     if (existingUser) {
       return res
         .status(409)
         .json({ message: "This phone number is already registered." });
     }
 
-    const user = new User({
-      email,
+    // Create phone user without email field
+    const userData: any = {
       phoneNumber,
       firstName,
       lastName,
       authProvider: "phone",
       isEmailVerified: true,
-    });
+    };
+
+    // Explicitly do not set email field for phone users to avoid index issues
+    const user = new User(userData);
     await user.save();
 
     sendAuthResponse(res, user, 201, "Account created successfully", {
@@ -288,8 +293,12 @@ export const phoneLogin = async (
         .json({ message: "Phone number is required for login." });
     }
 
-    const email = `${phoneNumber}@phone.user`;
-    const user = await User.findOne({ email });
+    // Search by phone number only (clean approach)
+    const user = await User.findOne({
+      phoneNumber,
+      authProvider: "phone",
+    });
+
     if (!user) {
       return res.status(404).json({
         message: "No account found for this phone number. Please sign up.",
@@ -524,5 +533,318 @@ export const linkPhone = async (
     return res
       .status(500)
       .json({ message: "Unable to link phone number. Please try again." });
+  }
+};
+
+// ==================================
+// Update Profile Controller
+// ==================================
+export const updateProfile = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const { firstName, lastName, email, phoneNumber } = req.body;
+
+    // Validation
+    if (!firstName || firstName.trim().length < 2) {
+      return res.status(400).json({
+        message:
+          "First name is required and must be at least 2 characters long",
+      });
+    }
+
+    if (!lastName || lastName.trim().length < 2) {
+      return res.status(400).json({
+        message: "Last name is required and must be at least 2 characters long",
+      });
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        message: "Please provide a valid email address",
+      });
+    }
+
+    if (phoneNumber && !/^\+?[\d\s\-\(\)]+$/.test(phoneNumber)) {
+      return res.status(400).json({
+        message: "Please provide a valid phone number",
+      });
+    }
+
+    // Get current user to check their auth provider
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Validation based on auth provider
+    if (currentUser.authProvider === "phone") {
+      // Phone users can optionally add email, but phoneNumber is required
+      if (!phoneNumber) {
+        return res.status(400).json({
+          message: "Phone number is required for phone-authenticated users",
+        });
+      }
+    } else {
+      // Email users require email
+      if (!email) {
+        return res.status(400).json({
+          message: "Email is required for email-authenticated users",
+        });
+      }
+    }
+
+    // Check for duplicate email (if provided)
+    if (email) {
+      const existingUser = await User.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: userId },
+      });
+
+      if (existingUser) {
+        return res.status(400).json({
+          message:
+            "This email address is already associated with another account",
+        });
+      }
+    }
+
+    // Check for duplicate phone number (if provided)
+    if (phoneNumber) {
+      const existingPhoneUser = await User.findOne({
+        phoneNumber: phoneNumber.trim(),
+        _id: { $ne: userId },
+      });
+
+      if (existingPhoneUser) {
+        return res.status(400).json({
+          message:
+            "This phone number is already associated with another account",
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+    };
+
+    // Update email only if provided and not a phone-only user
+    if (email && currentUser.authProvider !== "phone") {
+      updateData.email = email.toLowerCase().trim();
+    } else if (email && currentUser.authProvider === "phone") {
+      // Phone users can have email as optional contact info
+      updateData.email = email.toLowerCase().trim();
+    }
+
+    // Update phone number if provided
+    if (phoneNumber) {
+      updateData.phoneNumber = phoneNumber.trim();
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+      select: "-password -resetPasswordToken -resetPasswordExpires",
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser._id,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        name: updatedUser.name,
+        authProvider: updatedUser.authProvider,
+        isEmailVerified: updatedUser.isEmailVerified,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Update profile error:", error);
+    return res.status(500).json({
+      message: "Unable to update profile. Please try again.",
+    });
+  }
+};
+
+// ==================================
+// Get User Settings Controller
+// ==================================
+export const getUserSettings = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    const userId = req.user?.id;
+    console.log("🔍 getUserSettings called for userId:", userId);
+
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("❌ User not found for id:", userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return user settings or defaults
+    const settings = user.settings || {
+      emailNotifications: true,
+      smsNotifications: false,
+      propertyAlerts: true,
+      marketingEmails: false,
+      profileVisibility: "public",
+      showPhoneNumber: false,
+      showEmail: true,
+    };
+
+    console.log("✅ Returning settings for user:", userId, settings);
+    res.json(settings);
+  } catch (error) {
+    console.error("❌ Get settings error:", error);
+    return res.status(500).json({
+      message: "Unable to fetch settings. Please try again.",
+    });
+  }
+};
+
+// ==================================
+// Update User Settings Controller
+// ==================================
+export const updateUserSettings = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    const userId = req.user?.id;
+    console.log("🔍 updateUserSettings called for userId:", userId);
+    console.log("📝 Request body:", req.body);
+
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("❌ User not found for id:", userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("📄 Current user settings:", user.settings);
+
+    // Initialize settings if they don't exist
+    if (!user.settings) {
+      user.settings = {
+        emailNotifications: true,
+        smsNotifications: false,
+        propertyAlerts: true,
+        marketingEmails: false,
+        profileVisibility: "public",
+        showPhoneNumber: false,
+        showEmail: true,
+      };
+    }
+
+    // Update the settings by directly modifying the subdocument
+    Object.keys(req.body).forEach((key) => {
+      if (user.settings) {
+        (user.settings as any)[key] = req.body[key];
+      }
+    });
+
+    console.log("🔄 Updated settings:", user.settings);
+
+    // Save the user document
+    const savedUser = await user.save();
+
+    if (!savedUser) {
+      console.log("❌ User save failed for id:", userId);
+      return res.status(500).json({ message: "Failed to save settings" });
+    }
+
+    console.log(
+      "✅ Settings saved successfully for user:",
+      userId,
+      savedUser.settings
+    );
+    res.json({
+      message: "Settings updated successfully",
+      settings: savedUser.settings,
+    });
+  } catch (error) {
+    console.error("❌ Update settings error:", error);
+    return res.status(500).json({
+      message: "Unable to update settings. Please try again.",
+    });
+  }
+};
+
+// ==================================
+// Delete Account Controller
+// ==================================
+export const deleteAccount = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    const userId = req.user?.id;
+    console.log("🔍 deleteAccount called for userId:", userId);
+
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log("❌ User not found for id:", userId);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("📄 Deleting user:", user.email || user.phoneNumber);
+
+    // Here you could also delete related data like properties, notifications, etc.
+    // For now, we'll just delete the user account
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      console.log("❌ Failed to delete user for id:", userId);
+      return res.status(500).json({ message: "Failed to delete account" });
+    }
+
+    console.log("✅ User account deleted successfully:", userId);
+
+    // Clear the authentication cookie
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    res.json({
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    console.error("❌ Delete account error:", error);
+    return res.status(500).json({
+      message: "Unable to delete account. Please try again.",
+    });
   }
 };

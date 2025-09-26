@@ -8,6 +8,7 @@ import passport from "passport";
 
 // Load environment variables
 dotenv.config();
+// Profile update endpoint added
 
 // Import configurations and utilities
 import { validateEnvironment, getConfig } from "./config/environment";
@@ -22,11 +23,11 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 // Import routes
 import authRoutes from "./routes/authRoutes";
 import propertyRoutes from "./routes/propertyRoutes";
-// @ts-ignore - JS module in TS project
-import notificationRoutes from "../routes/notificationRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 import {
   listPropertiesForAdmin,
   updatePropertyStatus,
+  getDashboardStats,
 } from "./controllers/propertyController";
 import { authenticateToken } from "./middleware/auth";
 
@@ -153,6 +154,38 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/notifications", notificationRoutes);
+
+// Dashboard stats route
+app.get(
+  "/api/dashboard/stats",
+  authenticateToken as any,
+  getDashboardStats as any
+);
+
+// Debug endpoint to check user state
+app.get("/api/admin/debug-users", async (req, res) => {
+  try {
+    const { User } = await import("./models/User");
+    const users = await User.find({})
+      .select("email phoneNumber authProvider")
+      .lean();
+    res.json({ users, count: users.length });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete test user endpoint
+app.delete("/api/admin/delete-test-user/:phoneNumber", async (req, res) => {
+  try {
+    const { User } = await import("./models/User");
+    const phoneNumber = req.params.phoneNumber;
+    const result = await User.deleteOne({ phoneNumber });
+    res.json({ message: "User deleted", deletedCount: result.deletedCount });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 // Admin guard
 const requireAdmin: any = async (req: any, res: any, next: any) => {

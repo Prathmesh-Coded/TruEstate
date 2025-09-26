@@ -79,7 +79,7 @@ const NotificationBell: React.FC = () => {
       >
         <svg
           className={`w-6 h-6 transition-all ${
-            isOpen ? "fill-white stroke-white" : "fill-none stroke-white"
+            isOpen ? "fill-black stroke-black" : "fill-none stroke-black"
           }`}
           viewBox="0 0 24 24"
         >
@@ -98,14 +98,14 @@ const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50 max-h-96 overflow-hidden">
+        <div className="absolute right-0 sm:left-auto sm:right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-lg shadow-lg border z-50 max-h-96 overflow-hidden transform -translate-x-1/2 sm:translate-x-0">
           <div className="p-4 border-b bg-gray-50">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Notifications</h3>
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  navigate("/notifications");
+                  navigate("/dashboard/notifications");
                 }}
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
               >
@@ -178,7 +178,7 @@ const NotificationBell: React.FC = () => {
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  navigate("/notifications");
+                  navigate("/dashboard/notifications");
                 }}
                 className="w-full text-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
               >
