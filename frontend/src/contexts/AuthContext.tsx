@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
 interface User {
-  email: string;
+  email?: string;
   phoneNumber?: string;
   firstName?: string;
   lastName?: string;
@@ -10,6 +10,8 @@ interface User {
   authProvider?: string;
   isEmailVerified?: boolean;
   role?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthContextType {
@@ -71,25 +73,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = async () => {
     try {
+      console.log("🔍 AuthContext: Checking authentication...");
       const response = await fetch("http://localhost:5000/api/auth/me", {
         credentials: "include",
       });
 
+      console.log("🔍 AuthContext: Auth response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("✅ AuthContext: User authenticated:", data.user);
         setUser(deriveFirstName(data.user));
       } else {
         // Don't log 401 errors as they're expected when not authenticated
         if (response.status !== 401) {
-          console.error("Auth check error:", response.status);
+          console.error("❌ AuthContext: Auth check error:", response.status);
+        } else {
+          console.log("⚠️ AuthContext: User not authenticated (401)");
         }
         setUser(null);
       }
     } catch (error) {
-      console.error("Auth check error:", error);
+      console.error("❌ AuthContext: Auth check error:", error);
       setUser(null);
     } finally {
       setLoading(false);
+      console.log("🏁 AuthContext: Auth check completed");
     }
   };
 

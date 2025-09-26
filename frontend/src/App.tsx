@@ -2,25 +2,30 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  Navigate,
   useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import Header from "./components/Header";
-// import ToastContainer from "./components/ToastContainer"; // Disabled - no floating notifications
-import NotificationCenter from "./components/NotificationCenter";
 import AuthPage from "./components/AuthPage";
 import ForgotPassword from "./components/ForgotPassword";
 import PropertyLoadingScreen from "./components/PropertyLoadingScreen";
 import PostProperty from "./components/PostProperty";
 import { motion, AnimatePresence } from "framer-motion";
 import AdminRoute from "./components/AdminRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import AdminVerification from "./components/AdminVerification";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import AdminLogin from "./components/admin/AdminLogin";
 import AdminUsers from "./components/admin/AdminUsers";
 import AdminSettings from "./components/admin/AdminSettings";
+import DashboardLayout from "./components/dashboard/DashboardLayout";
+import DashboardNotifications from "./components/dashboard/DashboardNotifications";
+import DashboardProfile from "./components/dashboard/DashboardProfile";
+import DashboardProperties from "./components/dashboard/DashboardProperties";
+import DashboardSettings from "./components/dashboard/DashboardSettings";
 
 function HomePage() {
   const { user } = useAuth();
@@ -67,15 +72,21 @@ function AnimatedRoutes() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/post-property" element={<PostProperty />} />
+        {/* Dashboard routes */}
         <Route
-          path="/notifications"
+          path="/dashboard"
           element={
-            <div>
-              <Header />
-              <NotificationCenter />
-            </div>
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/dashboard/profile" replace />} />
+          <Route path="profile" element={<DashboardProfile />} />
+          <Route path="properties" element={<DashboardProperties />} />
+          <Route path="notifications" element={<DashboardNotifications />} />
+          <Route path="settings" element={<DashboardSettings />} />
+        </Route>
         {/* Admin public route: login */}
         <Route path="/admin/login" element={<AdminLogin />} />
         {/* Admin protected routes */}

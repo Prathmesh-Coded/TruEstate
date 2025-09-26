@@ -112,4 +112,48 @@ router.get(
  */
 router.get("/google/failure", authController.googleAuthFailure);
 
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile information
+ * @access  Private
+ */
+router.put(
+  "/profile",
+  authenticateToken as any,
+  authController.updateProfile as any
+);
+
+/**
+ * @route   GET /api/auth/settings
+ * @desc    Get user settings
+ * @access  Private
+ */
+router.get(
+  "/settings",
+  authenticateToken as any,
+  authController.getUserSettings as any
+);
+
+/**
+ * @route   PUT /api/auth/settings
+ * @desc    Update user settings
+ * @access  Private
+ */
+router.put(
+  "/settings",
+  authenticateToken as any,
+  authController.updateUserSettings as any
+);
+
+/**
+ * @route   DELETE /api/auth/delete-account
+ * @desc    Delete user account
+ * @access  Private
+ */
+router.delete(
+  "/delete-account",
+  authenticateToken as any,
+  authController.deleteAccount as any
+);
+
 export default router;

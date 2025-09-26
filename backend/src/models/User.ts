@@ -6,11 +6,19 @@ const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
-      required: true,
-      unique: true,
+      required: function (this: IUser) {
+        // Email is required only for local and google auth providers
+        return this.authProvider === "local" || this.authProvider === "google";
+      },
+      sparse: true, // Allow null values for phone users
       lowercase: true,
       trim: true,
-      index: true,
+      validate: {
+        validator: function (v: string) {
+          return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        },
+        message: "Please provide a valid email address",
+      },
     },
     password: {
       type: String,
@@ -19,7 +27,6 @@ const userSchema = new Schema<IUser>(
     googleId: {
       type: String,
       sparse: true,
-      index: true,
     },
     firstName: {
       type: String,
@@ -39,8 +46,6 @@ const userSchema = new Schema<IUser>(
     phoneNumber: {
       type: String,
       trim: true,
-      index: true,
-      unique: true,
       sparse: true,
     },
     avatar: {
@@ -79,6 +84,54 @@ const userSchema = new Schema<IUser>(
       default: "user",
       index: true,
     },
+    savedProperties: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Property",
+      },
+    ],
+    settings: {
+      type: {
+        emailNotifications: {
+          type: Boolean,
+          default: true,
+        },
+        smsNotifications: {
+          type: Boolean,
+          default: false,
+        },
+        propertyAlerts: {
+          type: Boolean,
+          default: true,
+        },
+        marketingEmails: {
+          type: Boolean,
+          default: false,
+        },
+        profileVisibility: {
+          type: String,
+          enum: ["public", "private", "contacts-only"],
+          default: "public",
+        },
+        showPhoneNumber: {
+          type: Boolean,
+          default: false,
+        },
+        showEmail: {
+          type: Boolean,
+          default: true,
+        },
+      },
+      default: () => ({
+        emailNotifications: true,
+        smsNotifications: false,
+        propertyAlerts: true,
+        marketingEmails: false,
+        profileVisibility: "public",
+        showPhoneNumber: false,
+        showEmail: true,
+      }),
+    },
   },
   {
     timestamps: true,
@@ -92,9 +145,9 @@ const userSchema = new Schema<IUser>(
 );
 
 // Compound indexes for better performance
-userSchema.index({ email: 1, authProvider: 1 });
-userSchema.index({ googleId: 1, authProvider: 1 });
-userSchema.index({ phoneNumber: 1 });
+userSchema.index({ email: 1 }, { unique: true, sparse: true }); // Unique sparse email index
+userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true }); // Unique sparse phone index
+userSchema.index({ googleId: 1, authProvider: 1 }, { sparse: true });
 
 // Pre-save middleware for password hashing
 userSchema.pre("save", async function (next) {

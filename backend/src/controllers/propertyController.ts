@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Property } from "../models/Property";
+import { User } from "../models/User";
 import { IAuthenticatedRequest } from "../types";
 import { runAutoValidation } from "../utils/propertyValidation";
 import {
@@ -7,9 +8,8 @@ import {
   sendPropertyRejected,
   sendPropertyApproved,
 } from "../utils/messaging";
-import { User } from "../models/User";
 // @ts-ignore - JS module in TS project
-import NotificationService from "../../services/notificationService";
+import NotificationService from "../services/notificationService";
 
 // POST /api/properties (user)
 export const createProperty = async (
@@ -229,5 +229,225 @@ export const updatePropertyStatus = async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ message: "Failed to update property status" });
+  }
+};
+
+// GET /api/properties/my-properties - Get user's own properties
+export const getUserProperties = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    console.log("🔍 getUserProperties called for userId:", req.user?.id);
+
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const properties = await Property.find({ owner: req.user.id })
+      .populate("owner", "name phone email")
+      .sort({ createdAt: -1 });
+
+    console.log(
+      "📋 Found properties for user:",
+      req.user.id,
+      "Count:",
+      properties.length
+    );
+
+    // Transform the properties to match frontend interface
+    const transformedProperties = properties.map((prop: any) => ({
+      _id: prop._id,
+      title: prop.title,
+      description: prop.description,
+      price: prop.price,
+      location: {
+        address: prop.address?.street || "",
+        city: prop.address?.city || "",
+        state: prop.address?.state || "",
+        zipCode: prop.address?.pincode || "",
+      },
+      type: prop.propertyType || "apartment", // Map propertyType to type
+      bedrooms: prop.bedrooms,
+      bathrooms: prop.bathrooms,
+      area: prop.floors || 1, // Map floors to area for now
+      images: prop.photos || [], // Map photos to images
+      amenities: [], // Default empty array
+      status: (() => {
+        const verificationStatus = prop.verification?.status;
+        switch (verificationStatus) {
+          case "AUTO_VALID":
+          case "APPROVED":
+            return "active";
+          case "AUTO_INVALID":
+            return "inactive";
+          case "REJECTED":
+            return "rejected";
+          case "PENDING_AUTO":
+          case "FLAGGED":
+          default:
+            return "under-verification";
+        }
+      })(),
+      owner: {
+        _id: prop.owner._id,
+        name: prop.owner.name || "User",
+        phone: prop.owner.phone,
+        email: prop.owner.email,
+      },
+      views: prop.views || 0,
+      likes: prop.likes || 0,
+      createdAt: prop.createdAt,
+      updatedAt: prop.updatedAt,
+    }));
+
+    console.log(
+      "� Transformed properties:",
+      JSON.stringify(transformedProperties, null, 2)
+    );
+
+    return res.json({
+      success: true,
+      properties: transformedProperties,
+    });
+  } catch (error) {
+    console.error("Get user properties error:", error);
+    return res.status(500).json({ message: "Failed to fetch properties" });
+  }
+};
+
+// GET /api/properties/saved - Get user's saved/liked properties
+export const getSavedProperties = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findById(req.user.id).populate({
+      path: "savedProperties",
+      populate: {
+        path: "owner",
+        select: "name phone email",
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const savedProperties = ((user as any).savedProperties || []).map(
+      (property: any) => ({
+        _id: `saved_${property._id}`,
+        property,
+        savedAt: new Date(),
+      })
+    );
+
+    return res.json({
+      success: true,
+      savedProperties,
+    });
+  } catch (error) {
+    console.error("Get saved properties error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch saved properties" });
+  }
+};
+
+// POST /api/properties/:id/save - Save a property
+export const saveProperty = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const propertyId = req.params.id;
+    const userId = req.user.id;
+
+    // Check if property exists
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Add property to user's saved properties
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedProperties: propertyId } },
+      { new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Property saved successfully",
+    });
+  } catch (error) {
+    console.error("Save property error:", error);
+    return res.status(500).json({ message: "Failed to save property" });
+  }
+};
+
+// DELETE /api/properties/:id/unsave - Unsave a property
+export const unsaveProperty = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const propertyId = req.params.id;
+    const userId = req.user.id;
+
+    // Remove property from user's saved properties
+    await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedProperties: propertyId } },
+      { new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Property removed from saved list",
+    });
+  } catch (error) {
+    console.error("Unsave property error:", error);
+    return res.status(500).json({ message: "Failed to unsave property" });
+  }
+};
+
+// GET /api/dashboard/stats - Get dashboard statistics
+export const getDashboardStats = async (
+  req: IAuthenticatedRequest,
+  res: Response
+): Promise<Response | void> => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const userId = req.user.id;
+
+    // Get total properties count
+    const totalProperties = await Property.countDocuments({ owner: userId });
+
+    // Get total views (sum of all property views)
+    const viewsResult = await Property.aggregate([
+      { $match: { owner: userId } },
+      { $group: { _id: null, totalViews: { $sum: "$views" } } },
+    ]);
+    const totalViews = viewsResult[0]?.totalViews || 0;
+
+    // Get saved properties count
+    const user = await User.findById(userId).select("savedProperties");
+    const savedProperties = (user as any)?.savedProperties?.length || 0;
+
+    return res.json({
+      success: true,
+      totalProperties,
+      totalViews,
+      savedProperties,
+    });
+  } catch (error) {
+    console.error("Get dashboard stats error:", error);
+    return res.status(500).json({ message: "Failed to fetch dashboard stats" });
   }
 };
